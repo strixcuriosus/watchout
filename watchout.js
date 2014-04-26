@@ -1,18 +1,20 @@
 // start slingin' some d3 here.
+var enemies, drag, player, moveDots, checkCollisions;
 var boardWidth = 1000;
-var boardHeight = 1000;
+var boardHeight = 500;
 var radius = 20;
-var maxX = boardWidth - radius;
-var maxY = boardHeight - radius;
-var enemyCount = 3;
-
+var playerRadius = 30;
+var enemyCount = 5;
+var currentScore  = 0;
+var collisionCount = 0;
+var highScore = 0;
 var enemySpawningPool = [];
+
 for (var i = 0; i < enemyCount; i++){
-  enemySpawningPool.push({"x": Math.max( boardWidth * 0.9, Math.random() * maxX),
-    "y": Math.max( boardHeight * 0.9, Math.random() * maxY)});
+  enemySpawningPool.push({"x": 400, "y": 350});
 }
 
-var gameBoard = d3.select("body")
+d3.select("body")
   .append("svg")
   .attr("width", boardWidth)
   .attr("height", boardHeight)
@@ -21,63 +23,71 @@ var gameBoard = d3.select("body")
   .data(enemySpawningPool)
   .enter().append("circle").attr("class", "enemy");
 
-var svg = d3.select("svg");
+enemies = d3.selectAll('g .enemy');
 
+function dragmove(d) {
+  d3.select(this)
+      .attr("cx", d.x = d3.event.x)
+      .attr("cy", d.y = d3.event.y);
+};
 
+drag = d3.behavior.drag()
+    .on("drag", dragmove);
 
-// var updatedCircles = svg.selectAll("circle").data(enemySpawningPool)
-//   .enter().append("circle").attr("class", "enemy");
-
-var player = svg.selectAll('.player')
-  .data([{x:500, y:500}])
+player = d3.selectAll("svg").selectAll('.player')
+  .data([{x:50, y:50}])
   .enter()
   .append("circle")
-  .attr("r", radius * 2)
+  .attr("r", playerRadius)
   .attr("cx", function(d) {return d.x})
   .attr("cy", function(d) {return d.y})
   .attr("class", "player")
   .on('click', function(d, i) {
       console.log("hellllooooo");
-      return
-  });
-
-var drag = d3.behavior.drag()
-    .on("drag", dragmove);
-
-function dragmove(d) {
-  console.log('dragged');
-  // var x = d3.event.x;
-  // var y = d3.event.y;
-  // d3.select(this).attr("transform", "translate(" + x + "," + y + ")");
-}
+  }).call(drag);
 
 
-d3.selectAll('circle').call(drag);
 
 
-var moveDots = function() {
-  d3.selectAll('g').selectAll('circle')
-  // .attr("cx", function(d){return d.x * Math.random()})
-  // .attr("cy", function(d){return d.y * Math.random()})
-  .transition().duration(1500)
-  .attr("cx", function(d){return Math.max(radius, d.x * Math.random())})
-  .attr("cy", function(d){return Math.max(radius, d.y * Math.random())})
+moveDots = function() {
+  enemies.attr("r", radius)
+  .transition().duration(500)
+  .attr("cx", function(d){d.x = Math.max(radius, boardWidth * 0.95 * Math.random()); return d.x;})
+  .attr("cy", function(d){d.y = Math.max(radius, boardHeight * 0.95 * Math.random()); return d.y;})
   ;
 };
 
-setInterval(moveDots, 1000);
-setTimeout(function(){d3.selectAll('g circle').attr("r", radius)}, 1000);
 
-// var drag = d3.behavior.drag()
-//     .origin(function(d) { return d; })
-//     .on("dragstart", dragstarted)
-//     .on("drag", dragged)
-//     .on("dragend", dragended);
+checkCollisions = function() {
+  var start = Date.now();
+  var playerPosition = player.data()[0];
+  // console.log('player position: ' + playerPosition.x + ', ' + playerPosition.y);
+  var enemyPositionArray = enemies.data();
+  for (var i = 0; i < enemyPositionArray.length; i++){
+    if (Math.sqrt(Math.pow(playerPosition.x - enemyPositionArray[i].x, 2)
+    + Math.pow(playerPosition.y - enemyPositionArray[i].y, 2)) < radius + playerRadius){
+      console.log("you did not survive. sorry, victim. the spawn wins.");
+      if (currentScore > highScore) {
+        highScore = currentScore;
+      }
+      currentScore = 0;
+      collisionCount++;
+      d3.select('.high span').text(parseInt(highScore));
+      d3.select('.collisions span').text(collisionCount);
+      return;
+    }
+  }
+  currentScore += 0.01;
+  d3.select('.current span').text(parseInt(currentScore));
+};
 
-// svg.selectAll(".player").on("drag", function(){alert ("drag!!!")});
-//
 
-
+moveDots();
+setInterval(checkCollisions, 500);
+// setTimeout(function(){
+//   setInterval(checkCollisions, 50);
+// }, 1000);
+setInterval(moveDots, 500);
 
 
 
